@@ -23,7 +23,7 @@ app = Flask(__name__)
 app.url_map.strict_slashes = False
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DB_CONNECTION_STRING")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = False
 app.config["JWT_SECRET_KEY"] = os.environ.get("FLASK_API_KEY")
 jwt = JWTManager(app)
 
@@ -45,76 +45,86 @@ def sitemap():
     return generate_sitemap(app)
 
 
-@app.route("/user", methods=["GET"])
-@app.route("/user/<int:user_id>", methods=["GET", "PUT", "DELETE"])
-@jwt_required()
-def handle_users(user_id=None):
-    if request.method == "GET":
-        if user_id is not None:
-            user_to_send = User.query.filter_by(id=user_id).one_or_none()
+# @app.route("/user", methods=["GET"])
+# @app.route("/user/<int:user_id>", methods=["GET", "PUT", "DELETE"])
+# @jwt_required()
+# def handle_users(user_id=None):
+#     if request.method == "GET":
+#         if user_id is not None:
+#             user_to_send = User.query.filter_by(id=user_id).one_or_none()
 
-            if user_to_send is not None:
-                return jsonify(user_to_send.serialize()), 200
-            else:
-                return jsonify({"msg": "Not found."}), 404
-        else:
-            all_users = User.query.all()
-            all_users = list(map(lambda usr: usr.serialize(), all_users))
-            return jsonify({"results": all_users}), 200
+#             if user_to_send is not None:
+#                 return jsonify(user_to_send.serialize()), 200
+#             else:
+#                 return jsonify({"msg": "Not found."}), 404
+#         else:
+#             all_users = User.query.all()
+#             all_users = list(map(lambda usr: usr.serialize(), all_users))
+#             return jsonify({"results": all_users}), 200
 
-    if request.method == "PUT":
-        body = request.json
-        email = body.get("email", None)
+#     if request.method == "PUT":
+#         body = request.json
+#         email = body.get("email", None)
 
-        if email is not None:
-            user_to_update = User.query.filter_by(id=user_id).first()
+#         if email is not None:
+#             user_to_update = User.query.filter_by(id=user_id).first()
 
-            if user_to_update is not None:
-                user_to_update.email = email
+#             if user_to_update is not None:
+#                 user_to_update.email = email
 
-                try:
-                    db.session.commit()
-                    return jsonify(user_to_update.serialize()), 201
-                except Exception as error:
-                    db.session.rollback()
-                    return jsonify(error.args)
-        else:
-            return jsonify({"msg": "Not found."}), 404
+#                 try:
+#                     db.session.commit()
+#                     return jsonify(user_to_update.serialize()), 201
+#                 except Exception as error:
+#                     db.session.rollback()
+#                     return jsonify(error.args)
+#         else:
+#             return jsonify({"msg": "Not found."}), 404
 
-    if request.method == "DELETE":
-        user_to_delete = User.query.filter_by(id=user_id).first()
+#     if request.method == "DELETE":
+#         user_to_delete = User.query.filter_by(id=user_id).first()
 
-        if user_to_delete is not None:
-            db.session.delete(user_to_delete)
+#         if user_to_delete is not None:
+#             db.session.delete(user_to_delete)
 
-            try:
-                db.session.commit()
-                return jsonify([]), 204
-            except Exception as error:
-                db.session.rollback()
-                return jsonify(error.args)
-        else:
-            return jsonify({"msg": "Not found."}), 404
+#             try:
+#                 db.session.commit()
+#                 return jsonify([]), 204
+#             except Exception as error:
+#                 db.session.rollback()
+#                 return jsonify(error.args)
+#         else:
+#             return jsonify({"msg": "Not found."}), 404
 
-    return "You should not be seeing this message /user"
+#     return "You should not be seeing this message /user"
 
 
 @app.route("/signup", methods=["POST"])
 def handle_signup():
     body = request.json
 
-    if not body.get("email") or not body.get("password"):
-        return jsonify({"msg": "Not found."}), 404
+    if (
+        not body.get("username")
+        or not body.get("email")
+        or not body.get("password")
+        or not body.get("planet")
+    ):
+        return jsonify({"response": "Incomplete information."}), 404
     else:
-        user = User(email=body["email"], password=body["password"])
+        user = User(
+            username=body["username"],
+            email=body["email"],
+            password=body["password"],
+            planet=body["planet"],
+        )
         db.session.add(user)
 
         try:
             db.session.commit()
-            return jsonify(user.serialize()), 201
+            return jsonify({"response": "Success"}), 201
         except Exception as error:
             db.session.rollback()
-            return jsonify(error.args), 500
+            return jsonify({"response": error.args}), 500
 
 
 @app.route("/login", methods=["POST"])
@@ -124,17 +134,23 @@ def handle_login():
     password = body.get("password", None)
 
     if email is None or password is None:
-        return jsonify({"msg": "Not found."}), 404
+        return jsonify({"response": "Incomplete information."}), 404
     else:
         user = User.query.filter_by(email=email, password=password).one_or_none()
 
         if user is not None:
             token = create_access_token(identity=user.id)
-            return jsonify({"token": token, "user_id": user.id, "email": user.email})
+            return jsonify(
+                {
+                    "response": {
+                        "token": token,
+                        "username": user.username,
+                        "planet": user.planet,
+                    }
+                }
+            )
         else:
-            return jsonify({"msg": "Not found."}), 404
-
-    return "You should not be seeing this message /login"
+            return jsonify({"response": "Incorrect email or password."}), 404
 
 
 @app.route("/favorites", methods=["GET", "POST", "DELETE"])
@@ -143,7 +159,7 @@ def handle_favorites():
     current_user_id = get_jwt_identity()
 
     if request.method == "GET":
-        all_favorites = Favorites.query.filter_by(user_id=current_user_id)
+        all_favorites = Favorites.query.filter_by(user_id=current_user_id).all()
         all_favorites = list(map(lambda fav: fav.serialize(), all_favorites))
 
         pre_item_favorites = []

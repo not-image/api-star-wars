@@ -10,8 +10,10 @@ class Base(db.Model):
 
 class User(Base):
     id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(80), unique=False, nullable=False)
+    planet = db.Column(db.String(25), nullable=False)
     favorites = db.relationship("Favorites", backref="user", uselist=True)
 
     def __repr__(self):
@@ -94,7 +96,7 @@ class Character(Item):
 
     def serialize(self):
         return {
-            "item_id": self.id,
+            "id": self.id,
             "name": self.name,
             "uid": self.uid,
             "type": self.type,
@@ -146,7 +148,7 @@ class Planet(Item):
 
     def serialize(self):
         return {
-            "item_id": self.id,
+            "id": self.id,
             "name": self.name,
             "uid": self.uid,
             "type": self.type,

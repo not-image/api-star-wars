@@ -39,64 +39,10 @@ def handle_invalid_usage(error):
     return jsonify(error.to_dict()), error.status_code
 
 
-# generate sitemap with all your endpoints
+# generate sitemap with all the endpoints
 @app.route("/")
 def sitemap():
     return generate_sitemap(app)
-
-
-# @app.route("/user", methods=["GET"])
-# @app.route("/user/<int:user_id>", methods=["GET", "PUT", "DELETE"])
-# @jwt_required()
-# def handle_users(user_id=None):
-#     if request.method == "GET":
-#         if user_id is not None:
-#             user_to_send = User.query.filter_by(id=user_id).one_or_none()
-
-#             if user_to_send is not None:
-#                 return jsonify(user_to_send.serialize()), 200
-#             else:
-#                 return jsonify({"msg": "Not found."}), 404
-#         else:
-#             all_users = User.query.all()
-#             all_users = list(map(lambda usr: usr.serialize(), all_users))
-#             return jsonify({"results": all_users}), 200
-
-#     if request.method == "PUT":
-#         body = request.json
-#         email = body.get("email", None)
-
-#         if email is not None:
-#             user_to_update = User.query.filter_by(id=user_id).first()
-
-#             if user_to_update is not None:
-#                 user_to_update.email = email
-
-#                 try:
-#                     db.session.commit()
-#                     return jsonify(user_to_update.serialize()), 201
-#                 except Exception as error:
-#                     db.session.rollback()
-#                     return jsonify(error.args)
-#         else:
-#             return jsonify({"msg": "Not found."}), 404
-
-#     if request.method == "DELETE":
-#         user_to_delete = User.query.filter_by(id=user_id).first()
-
-#         if user_to_delete is not None:
-#             db.session.delete(user_to_delete)
-
-#             try:
-#                 db.session.commit()
-#                 return jsonify([]), 204
-#             except Exception as error:
-#                 db.session.rollback()
-#                 return jsonify(error.args)
-#         else:
-#             return jsonify({"msg": "Not found."}), 404
-
-#     return "You should not be seeing this message /user"
 
 
 @app.route("/signup", methods=["POST"])

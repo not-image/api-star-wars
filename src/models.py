@@ -37,10 +37,6 @@ class Favorites(Base):
         db.UniqueConstraint("user_id", "items", name="unique_user_favorites"),
     )
 
-    @classmethod
-    def add_favorite(cls, data):
-        pass
-
     def serialize(self):
         return {"item": self.items}
 
@@ -64,7 +60,6 @@ class Character(Item):
     mass = db.Column(db.String(150))
     birth_year = db.Column(db.String(150))
     skin_color = db.Column(db.String(150))
-    # favorites = db.relationship("Favorites", backref="character", uselist=True)
 
     __mapper_args__ = {"polymorphic_identity": "characters"}
 
@@ -116,7 +111,6 @@ class Planet(Item):
     diameter = db.Column(db.String(150))
     climate = db.Column(db.String(150))
     gravity = db.Column(db.String(150))
-    # favorites = db.relationship("Favorites", backref="planet", uselist=True)
 
     __mapper_args__ = {"polymorphic_identity": "planets"}
 
